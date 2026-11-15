@@ -764,6 +764,7 @@ function whip_core:IsRadialOpen() end
 ---@field perModel table<string, { offset: vector3|nil, heading: number|nil }>|nil With model: one model placed its own way; what an entry leaves out is the action's offset / heading. /actionplace <id> aims it and copies the line
 ---@field radial boolean|nil The F1 wheel (a label is required; its slab shows `icon`, the pill under it `description`)
 ---@field aimBox 'vehicle'|'object'|'ped'|'world'|string[]|nil A prompt where the player looks on the box of the car / prop / person they aim at: flat on that side (wrapped round its corners) or over its top. Offered only while the look meets one in reach; ctx.entity is the thing, ctx.coords the point. 'world': the map itself (ground, walls) where the look meets it: ctx.entity nil, ctx.world true, ctx.normal the way the surface faces
+---@field aimModels (string|number)[]|nil Only these entity models may offer an aimBox action; other models and world hits are rejected before callbacks
 
 ---@class WhipActionRequire
 ---@field alive boolean|nil false: also offered while downed (default: alive only)
