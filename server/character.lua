@@ -419,3 +419,9 @@ exports('IsCharacterDeleted', function(charId)
     if row.deleted ~= nil then return true, 'deleted' end
     return false
 end)
+
+exports('RenameCharacter', function(who, firstName, lastName)
+    local charId, why = WhoIs(who)
+    if not charId then return false, why end
+    return Character.rename(charId, firstName, lastName, GetInvokingResource() or GetCurrentResourceName())
+end)

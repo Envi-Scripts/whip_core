@@ -755,6 +755,13 @@ Migrations.list = {
               unless = { column = { 'containers', 'reach' } } },
         },
     },
+    {
+        id = '046_vehicle_reservation',
+        statements = {
+            { sql = 'ALTER TABLE `vehicles` ADD COLUMN `reservation` VARCHAR(191) DEFAULT NULL',
+              unless = { column = { 'vehicles', 'reservation' } } },
+        },
+    },
 }
 
 -- ============================================

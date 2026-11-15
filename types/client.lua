@@ -458,6 +458,11 @@ function whip_core:ReleasePlayerPed(id) end
 --- Close the inventory UI (handles NUI, server cleanup, and focus release).
 function whip_core:CloseInventory() end
 
+--- Set the calling resource's inventory UI lock; released when that resource stops.
+---@param locked boolean
+---@return boolean ok False without an invoking resource or with an invalid value
+function whip_core:SetInventoryLocked(locked) end
+
 --- Get an item definition by key.
 ---@param key string Item key
 ---@return WhipItemDef|nil
