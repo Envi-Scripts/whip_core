@@ -1913,9 +1913,8 @@ function whip_core:RetrieveVehicle(vehicleId, garageKey) end
 
 --- Hand a vehicle to another player.
 ---
---- Takes the receiving player: their server id, or { charId = n } while they play. The new owner
---- must be online, the same rule CreateOwnedVehicle follows: read off a live player record, the
---- owner can only be a character that exists.
+--- Takes an online server id, or { charId = n } for an online or offline character.
+--- An offline character must exist and not be deleted. Keys are given only while online.
 ---
 --- Fires `whip_core:vehicle:ownerChanged` and re-syncs both players' vehicle lists.
 ---
@@ -4006,7 +4005,8 @@ function whip_core:GetUpdates() end
 ---@async
 function whip_core:RenameCharacter(who, firstName, lastName) end
 
---- Hold an owned vehicle for the calling resource, or release its hold. Holding despawns and garages it.
+--- Hold an owned vehicle against retrieval, spawning, transfer and deletion, or release this resource's hold.
+--- A stopped resource's hold is ignored. Does not despawn the car or change its garage or position.
 ---@param ref number|WhipVehicleRef
 ---@param held boolean
 ---@param expectedOwner? number Expected owner character id; refuse if ownership changed

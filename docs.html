@@ -1868,7 +1868,7 @@ if not ok then return false, why end</code></pre>
 <p>Wherever an export takes a person, a <strong>bare number is a server id</strong> (the <code>source</code> you already hold) and <strong><code>{ charId = n }</code></strong> is a character, online or not. A bare number is never a charId, except in exports whose name says so (<code>GetCharacterProperties(charId)</code>).</p>
 <pre><code class="lang-lua">exports.whip_core:GivePropertyKey(propertyId, source)              -- the player in front of you
 exports.whip_core:GivePropertyKey(propertyId, { charId = 42 })   -- a character, online or not</code></pre>
-<div class="info-box warn"><strong>A server id must be online.</strong> To reach someone who may be offline, pass <code>{ charId = n }</code>. Some calls need the person online either way (a car key, <code>TransferVehicle</code>); their cards say so. A parameter named <code>source</code> is always a server id.</div>
+<div class="info-box warn"><strong>A server id must be online.</strong> To reach someone who may be offline, pass <code>{ charId = n }</code>. Some calls need the person online either way (giving a car key, for example); their cards say so. A parameter named <code>source</code> is always a server id.</div>
 
 <h3 id="patterns-lookups">Finding one thing</h3>
 <p>A lookup is one call, <code>GetX(ref)</code>: an id, or a table with one key that says what you hold. A list is <code>GetXs(filter?)</code>.</p>
@@ -2754,6 +2754,17 @@ end</code></pre>
 <div class="export-body">
   <p>The character's name without copying the sheet. Not FiveM's <code>GetPlayerName</code>, the account's name.</p>
   <div class="return-info"><strong>Returns: </strong><code>string|nil</code></div>
+</div></div>
+
+<div class="export-card" data-search="renamecharacter character rename first last name identity">
+<div class="export-header"><span class="export-name">RenameCharacter(who, firstName, lastName)</span><span class="export-side side-server">SERVER</span></div>
+<div class="export-body">
+<p>Rename an online or offline character without changing their charId or anything owned by it. Uses the character editor's name rules: letters, spaces and hyphens, at least two letters and at most 30 characters per name. Online players receive the new name immediately; fires <code>whip_core:character:renamed</code>.</p>
+<table class="param-table"><tr><th>Param</th><th>Type</th><th>Description</th></tr>
+<tr><td>who</td><td>number|table</td><td>Online server id, or <code>{ charId = n }</code></td></tr>
+<tr><td>firstName, lastName</td><td>string</td><td>The two names</td></tr></table>
+<div class="return-info"><strong>Returns: </strong><code>true, fullName, oldName</code>, or <code>false, reason</code></div>
+<p>Check permission in your server handler before calling; this export does not grant a player permission to rename another character.</p>
 </div></div>
 
 <div class="export-card" data-search="getcharacternames names character offline list charid who">
@@ -4455,6 +4466,15 @@ if blocked then return false, why end</code></pre>
 <div class="return-info"><strong>Returns: </strong><code>bool</code></div>
 </div></div>
 
+<div class="export-card" data-search="setinventorylocked inventory lock busy access">
+<div class="export-header"><span class="export-name">SetInventoryLocked(locked)</span><span class="export-side side-client">CLIENT</span></div>
+<div class="export-body">
+<p>Block inventory opening for this resource and close an open inventory when locking. <code>false</code> releases only your resource's lock; other resource locks and the database lock still apply. Your lock is cleared when your resource stops. This is a client UI lock, not server authorization for inventory writes.</p>
+<table class="param-table"><tr><th>Param</th><th>Type</th><th>Description</th></tr>
+<tr><td>locked</td><td>boolean</td><td><code>true</code> to lock, <code>false</code> to release</td></tr></table>
+<div class="return-info"><strong>Returns: </strong><code>boolean accepted</code>; false for a non-boolean or no calling resource</div>
+</div></div>
+
 <div class="export-card" data-search="closeinventory close inventory ui">
 <div class="export-header"><span class="export-name">CloseInventory()</span><span class="export-side side-client">CLIENT</span></div>
 <div class="export-body">
@@ -4665,7 +4685,7 @@ if not item or item.item ~= 'alcohol' then return end</code></pre>
 <table class="param-table"><tr><th>Param</th><th>Type</th><th>Description</th></tr>
 <tr><td>addr</td><td>table</td><td>An <a href="#store-addresses">address</a>, with or without a slot</td></tr>
 <tr><td>amount</td><td>number?</td><td>How many</td></tr>
-<tr><td>opts</td><td>table|string?</td><td><code>{ item = 'drink' }</code> without a slot; <code>reason</code> for the log. A string is the reason</td></tr></table>
+<tr><td>opts</td><td>table|string?</td><td><code>{ item = 'drink', metadata = { quality = 'fresh' }, reason = 'used' }</code>. <code>item</code> is required without a slot. Optional <code>metadata</code> is a recursive partial match: extra keys are allowed, supplied values must match. Both filters apply with a slot too. A string is the reason for the log</td></tr></table>
 <div class="return-info"><strong>Returns: </strong><code>{ item, amount, metadata }</code> taken (metadata only from one slot), or <code>false, reason</code> (<code>'Empty slot'</code>, <code>'Not enough items'</code>…)</div>
 <pre><code class="lang-lua">local taken, err = exports.whip_core:StoreTake({ kind = 'container', id = 12 }, 5, { item = 'drink' })</code></pre>
 <div class="info-box warn"><strong>Taking isn't moving.</strong> What you take is gone; to put it elsewhere, use <code>StoreMove</code>.</div>
@@ -5297,6 +5317,7 @@ local turbo = exports.whip_core:GetVehicleData(vehicleId, 'turbo')        -- any
 <table class="event-table">
 <tr><th>Event</th><th>Payload</th><th>Fires when</th></tr>
 <tr><td><code>whip_core:vehicle:created</code></td><td><code>{ vehicleId, ownerCharId }</code></td><td>Any path makes a vehicle</td></tr>
+<tr><td><code>whip_core:vehicle:damageCleared</code></td><td><code>{ vehicleId }</code></td><td>After WHIP clears its recorded damage for a repair. A resource can clear its own damage data here; this does not itself repair the game entity</td></tr>
 <tr><td><code>whip_core:vehicle:ownerChanged</code></td><td><code>{ vehicleId, from, to }</code></td><td>A vehicle changes character</td></tr>
 <tr><td><code>whip_core:vehicle:deleted</code></td><td><code>{ vehicleId, ownerCharId, wasOut }</code></td><td>A vehicle stops existing. Remove your own per-car data here</td></tr>
 <tr><td><code>whip_core:vehicle:dataChanged</code></td><td><code>{ vehicleId, key, value, old, cleared, resource }</code></td><td>Vehicle data is set or removed, by <code>resource</code></td></tr>
@@ -5650,10 +5671,22 @@ if ok then exports.whip_core:SpawnVehicle(vehicleId, vector4(x, y, z, heading)) 
   <p>Sell a vehicle to another player. Writes the owner, re-syncs both players' lists and fires <code>whip_core:vehicle:ownerChanged</code>.</p>
   <table class="param-table"><tr><th>Param</th><th>Type</th><th>Description</th></tr>
   <tr><td>vehicleId</td><td>number</td><td>Vehicle ID</td></tr>
-  <tr><td>newOwner</td><td>number|table</td><td>The buyer, <strong>online</strong>: server id, or <code>{ charId = n }</code></td></tr>
-  <tr><td>opts</td><td>table?</td><td><code>{ giveKey, revokeOldKeys }</code>, both default <code>true</code></td></tr></table>
-  <div class="return-info"><strong>Returns: </strong><code>boolean, string|nil</code>: <code>'The new owner must be online'</code>, <code>'Session vehicles have no owner'</code> (use <code>ClaimVehicle</code>), <code>'Already owned by that character'</code></div>
+  <tr><td>newOwner</td><td>number|table</td><td>The buyer: an online server id, or <code>{ charId = n }</code> for an online or offline character that exists and is not deleted</td></tr>
+  <tr><td>opts</td><td>table?</td><td><code>{ giveKey, revokeOldKeys, expectedOwner }</code>. Key options default <code>true</code> and only affect online players. <code>expectedOwner</code> is the expected current owner character id; a changed owner is refused</td></tr></table>
+  <div class="return-info"><strong>Returns: </strong><code>boolean, string|nil</code>: <code>'No such character'</code>, <code>'Vehicle ownership changed'</code>, <code>'Vehicle is in custody'</code>, <code>'Session vehicles have no owner'</code> (use <code>ClaimVehicle</code>), <code>'Already owned by that character'</code></div>
   <div class="info-box warn"><strong>The seller can keep a working key.</strong> <code>revokeOldKeys</code> only empties their pockets while online; keys in a stash, a boot, on the ground or <strong>in the ignition</strong> still work. With full pockets the buyer gets no key and this still returns <code>true</code>.</div>
+</div></div>
+
+<div class="export-card" data-search="setvehiclecustody vehicle hold reservation custody">
+<div class="export-header"><span class="export-name">SetVehicleCustody(ref, held, expectedOwner)</span><span class="export-side side-server">SERVER</span></div>
+<div class="export-body">
+<p>Hold an owned vehicle for the calling resource. While that resource runs, retrieval, spawning, transfer and deletion are refused, including calls from the holder. Release the hold before those actions. Another running resource cannot replace or release it; a stopped resource's hold is ignored. The stored claim is not erased on stop and becomes active again if that resource restarts.</p>
+<table class="param-table"><tr><th>Param</th><th>Type</th><th>Description</th></tr>
+<tr><td>ref</td><td>number|table</td><td>Vehicle id or vehicle reference; session cars are refused</td></tr>
+<tr><td>held</td><td>boolean</td><td><code>true</code> to hold, <code>false</code> to release</td></tr>
+<tr><td>expectedOwner</td><td>number?</td><td>Expected owner character id; refuses a changed owner</td></tr></table>
+<div class="return-info"><strong>Returns: </strong><code>boolean ok, string|nil reason</code></div>
+<p>This only changes the hold. It does not despawn, garage, lock or move a car. To impound, use <code>CreateGarage</code> for a lot without a position, then <code>DespawnVehicle(vehicleId, { garage = 'impound', refuseOccupied = true })</code>. Release any hold before <code>RetrieveVehicle</code> and <code>SpawnVehicle</code>.</p>
 </div></div>
 
 <div class="export-card" data-search="deletevehicle destroy car remove chop shop repossession scrap">
@@ -6939,6 +6972,19 @@ end)</code></pre>
   <div class="return-info"><strong>Returns: </strong><code>table</code>: the shop, its declaration in <code>settings.ensured</code>; or <code>false, reason</code> (a bad catalog, no x/y/z, no such job or container, another resource's key, a database error)</div>
 </div></div>
 
+<div class="export-card" data-search="openshop shop open third party virtual">
+<div class="export-header"><span class="export-name">OpenShop(source, ref, opts)</span><span class="export-side side-server">SERVER</span></div>
+<div class="export-body">
+<p>Open a shop declared by the calling resource for a living, loaded player. Another resource's shop is refused. Purchases keep the shop's normal stock, payment and access checks.</p>
+<table class="param-table"><tr><th>Param</th><th>Type</th><th>Description</th></tr>
+<tr><td>source</td><td>number</td><td>Online player server id</td></tr>
+<tr><td>ref</td><td>number|table</td><td>Shop id, <code>{ id = n }</code>, <code>{ key = 'my_shop' }</code> or <code>{ containerId = n }</code></td></tr>
+<tr><td>opts</td><td>table?</td><td><code>range</code>: metres, default 3, greater than 0 and at most 20. <code>authorize(source)</code>: optional server check, must return <code>true</code>; checked again during the session</td></tr></table>
+<p>A physical shop opens within range of its coordinates. A virtual shop anchors the session at the player's opening position; moving out of range ends access. Validate who may open it in your server handler.</p>
+<div class="return-info"><strong>Returns: </strong><code>boolean opened, string|nil reason</code></div>
+<pre><code class="lang-lua">local ok, why = exports.whip_core:OpenShop(source, { key = 'my_shop' }, { range = 3 })</code></pre>
+</div></div>
+
 <div class="export-card" data-search="createshop shop create new">
 <div class="export-header"><span class="export-name">CreateShop(data)</span><span class="export-side side-server">SERVER</span></div>
 <div class="export-body">
@@ -6977,6 +7023,9 @@ end)</code></pre>
   <tr><td>layout</td><td>table?</td><td><code>{ [itemKey] = { category, order } }</code>. Each entry replaces that item's place; one with neither removes it; others keep theirs</td></tr></table>
   <div class="return-info"><strong>Returns: </strong><code>boolean, string|nil</code>: <code>false</code> for an unknown item, a tab the shop doesn't have, a tab name too long or too many tabs</div>
 </div></div>
+
+<h3>Virtual shops</h3>
+<p>Set <code>settings.virtual = true</code> in <code>EnsureShop</code>, <code>CreateShop</code> or <code>UpdateShop</code> when your resource provides the interaction. WHIP creates no keeper, prop, prompt or blip for it; open it through <code>OpenShop</code>. The shop still needs x/y/z in its declaration and uses the same catalog, stock and payment rules.</p>
 
 <h3>Catalog (infinite and npc shops)</h3>
 
@@ -12485,7 +12534,7 @@ end)</code></pre>
   // ---- WAITS: the exports that can wait (on the database, on the player), each card's badge. The same list as
   // the ---@async marks in types/server.lua and types/client.lua. `node dev/waits.js --write` writes this line and
   // lib/satellite.lua's from the code; `--check` keeps all three the same ----
-  var WAITS = {"server":["AddCatalogItem","AddItem","AdoptVehicle","BankDeposit","BankSystemDeposit","BankSystemTransfer","BankSystemWithdraw","BankTransfer","BankWithdraw","CanGrantBankAccess","CanHirePlayer","CanUseBankAccount","ChangeVehicleLocks","ChargePlayer","ClaimVehicle","ClearAllVehicleData","ClearVehicleData","CloseBankAccount","ClosePanel","ClosePlayerInventory","CloseStore","CommitWithAction","CountVehicleKeys","CreateBankAccount","CreateContainer","CreateDoor","CreateGarage","CreateGroundItem","CreateJobRole","CreateOwnedVehicle","CreateShop","DeleteContainer","DeleteDoor","DeleteGarage","DeleteGroundItem","DeleteJob","DeleteJobRole","DeleteShop","DeleteZone","DespawnVehicle","EnsureContainer","EnsureDoor","EnsureDoors","EnsureJob","EnsureShop","EnsureTable","EnsureZone","FlushActivityLog","GetBalance","GetBankAccessList","GetBankAccount","GetBankTransactions","GetCharacterBankAccounts","GetCharacterNames","GetDefaultBankAccount","GetItemAt","GetJobBankAccounts","GetPermissionHolders","GetPlayerMetadata","GetPlayerVehicleKeys","GetScenarioStats","GetShopPrices","GetShopStock","GiveOnLogin","GivePropertyKey","GiveVehicleKey","GrantBankAccess","GrantPermission","HasVehicleKey","HirePlayer","HoldDoor","HoldMoney","IsCharacterDeleted","LinkDoors","LogActivity","LoreSay","OpenPlayerInventory","OpenStore","PayAsLore","PayPlayer","Progress","RefundPlayer","RegisterPropertyPack","RegisterProps","RegisterVehicles","RemoveCatalogItem","RemoveItem","RemovePropertyKey","RemoveVehicleKey","RequestScreenshot","RevokeBankAccess","RevokePermission","SavePlayer","SetBankAccountFrozen","SetHeldItem","SetItemMetadata","SetPlayerMetadata","SetPropertyOwner","SetPropertyTheme","SetShopItemPrice","SetShopLayout","SetVehicleAppearance","SetVehicleData","SetVehicleGarage","SetVehicleLocked","SetVehiclePlate","SettleMoneyHold","SkillCheck","SpawnTempVehicle","SpawnVehicle","StoreCount","StoreGive","StoreMove","StoreRead","StoreTake","SwitchScenario","TestDirectorCard","TestDirectorScenario","TransferVehicle","UnlinkDoors","UpdateContainer","UpdateDoor","UpdateGarage","UpdateJob","UpdateJobRole","UpdateShop"],"client":["Alert","Callback","ClockOff","ClockOn","Confirm","EnterCharacter","FreeHands","GetPlayerFullName","Input","LoadAnimDict","LoadAnimSet","LoadModel","LoadPtfxAsset","LoadTextureDict","OpenKeyboard","OrbitCamera","PlaceObject","PlayCameraPath","PlayCameraSequence","PressScreen","Progress","ReadScreen","ResolveVehicle","SkillCheck","TakeScreenshot","TakeVehicleControl"]};
+  var WAITS = {"server":["AddCatalogItem","AddItem","AdoptVehicle","BankDeposit","BankSystemDeposit","BankSystemTransfer","BankSystemWithdraw","BankTransfer","BankWithdraw","CanGrantBankAccess","CanHirePlayer","CanUseBankAccount","ChangeVehicleLocks","ChargePlayer","ClaimVehicle","ClearAllVehicleData","ClearVehicleData","CloseBankAccount","ClosePanel","ClosePlayerInventory","CloseStore","CommitWithAction","CountVehicleKeys","CreateBankAccount","CreateContainer","CreateDoor","CreateGarage","CreateGroundItem","CreateJobRole","CreateOwnedVehicle","CreateShop","DeleteContainer","DeleteDoor","DeleteGarage","DeleteGroundItem","DeleteJob","DeleteJobRole","DeleteShop","DeleteZone","DespawnVehicle","EnsureContainer","EnsureDoor","EnsureDoors","EnsureJob","EnsureShop","EnsureTable","EnsureZone","FlushActivityLog","GetBalance","GetBankAccessList","GetBankAccount","GetBankTransactions","GetCharacterBankAccounts","GetCharacterNames","GetDefaultBankAccount","GetItemAt","GetJobBankAccounts","GetPermissionHolders","GetPlayerMetadata","GetPlayerVehicleKeys","GetScenarioStats","GetShopPrices","GetShopStock","GiveOnLogin","GivePropertyKey","GiveVehicleKey","GrantBankAccess","GrantPermission","HasVehicleKey","HirePlayer","HoldDoor","HoldMoney","IsCharacterDeleted","LinkDoors","LogActivity","LoreSay","OpenPlayerInventory","OpenShop","OpenStore","PayAsLore","PayPlayer","Progress","RefundPlayer","RegisterPropertyPack","RegisterProps","RegisterVehicles","RemoveCatalogItem","RemoveItem","RemovePropertyKey","RemoveVehicleKey","RenameCharacter","RequestScreenshot","RevokeBankAccess","RevokePermission","SavePlayer","SetBankAccountFrozen","SetHeldItem","SetItemMetadata","SetPlayerMetadata","SetPropertyOwner","SetPropertyTheme","SetShopItemPrice","SetShopLayout","SetVehicleAppearance","SetVehicleCustody","SetVehicleData","SetVehicleGarage","SetVehicleLocked","SetVehiclePlate","SettleMoneyHold","SkillCheck","SpawnTempVehicle","SpawnVehicle","StoreCount","StoreGive","StoreMove","StoreRead","StoreTake","SwitchScenario","TestDirectorCard","TestDirectorScenario","TransferVehicle","UnlinkDoors","UpdateContainer","UpdateDoor","UpdateGarage","UpdateJob","UpdateJobRole","UpdateShop"],"client":["Alert","Callback","ClockOff","ClockOn","Confirm","EnterCharacter","FreeHands","GetPlayerFullName","Input","LoadAnimDict","LoadAnimSet","LoadModel","LoadPtfxAsset","LoadTextureDict","OpenKeyboard","OrbitCamera","PlaceObject","PlayCameraPath","PlayCameraSequence","PressScreen","Progress","ReadScreen","ResolveVehicle","SkillCheck","TakeScreenshot","TakeVehicleControl"]};
   (function () {
     var waits = { server: {}, client: {} };
     ['server', 'client'].forEach(function (side) { WAITS[side].forEach(function (n) { waits[side][n] = true; }); });

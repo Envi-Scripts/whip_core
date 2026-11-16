@@ -2,6 +2,12 @@
 
 Vehicles = {}
 
+local function heldBy(def)
+    local by = def.reservation
+    if by and Registry.alive(by) then return by end
+    return nil
+end
+
 --- Every vehicle whip knows about, keyed by id. Private: read it through `Vehicles.context` (a
 --- copy), write it through `Vehicles.persist` (the only database writer). Used directly only
 --- inside this file.
@@ -269,6 +275,7 @@ function Vehicles.ensureTable()
             -- The car's locks (Vehicles.changeLocks): set, only keys cut with it fit; NULL, every key of
             -- this car does (migration 044 adds it to an existing table).
             `keyToken`           VARCHAR(24)      DEFAULT NULL,
+            `reservation`        VARCHAR(191)     DEFAULT NULL,
             `createdAt`    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (`vehicleId`),
             UNIQUE KEY `uk_plate` (`plate`),
@@ -1161,7 +1168,7 @@ function Vehicles.transferOwner(vehicleId, newCharId, expectedOwner)
     if Vehicles._transitionLocks[vehicleId] then return false, 'Vehicle is busy' end
     local def = Vehicles._records[vehicleId]
     if not def then return false, 'Vehicle not found' end
-    if def.reservation then return false, 'Vehicle is in custody' end
+    if heldBy(def) then return false, 'Vehicle is in custody' end
     if expectedOwner ~= nil and def.ownerCharId ~= tonumber(expectedOwner) then return false, 'Vehicle ownership changed' end
 
     -- A street car whip adopted has no row and nobody owns it.
@@ -1211,7 +1218,7 @@ local deleteLocked
 function Vehicles.delete(vehicleId)
     local delDef = Vehicles._records[vehicleId]
     if not delDef then return false, 'Vehicle not found' end
-    if delDef.reservation then return false, 'Vehicle is in custody' end
+    if heldBy(delDef) then return false, 'Vehicle is in custody' end
 
     -- Not mid-transition, and the lock is held for the whole delete: it waits four times, and a
     -- spawn landing in one of those waits would bind a car to an id that no longer exists.
@@ -2853,7 +2860,7 @@ end
 function Vehicles.spawn(vehicleId, x, y, z, heading)
     local def = Vehicles._records[vehicleId]
     if not def then return nil, 'Vehicle not found' end
-    if def.reservation then return nil, 'Vehicle is in custody' end
+    if heldBy(def) then return nil, 'Vehicle is in custody' end
 
     -- A session vehicle is a street car whip adopted (Vehicles.adopt), not one it built.
     if def.session then return nil, 'Session vehicles are adopted, not spawned' end
@@ -3777,7 +3784,7 @@ function Vehicles.retrieve(vehicleId, garageKey)
     if Vehicles._transitionLocks[vehicleId] then return false, 'Vehicle is busy' end
     local def = Vehicles._records[vehicleId]
     if not def then return false, 'Vehicle not found' end
-    if def.reservation then return false, 'Vehicle is in custody' end
+    if heldBy(def) then return false, 'Vehicle is in custody' end
     if def.state ~= 'garaged' then return false, 'Vehicle is not garaged' end
     -- Allow retrieval if garage matches OR if vehicle has no garage assigned (admin set state)
     if def.garage and def.garage ~= '' and def.garage ~= garageKey then return false, 'Wrong garage' end
@@ -4472,13 +4479,13 @@ function Vehicles.spawnTempFor(model, coords, opts, owner)
     return vehicleId
 end
 
---- Hand a vehicle to another player (a server id, or { charId = n } for a character playing now); they must be online.
+--- Hand a vehicle to another character: an online server id, or { charId = n } online or offline.
 --- A `vehicle_key` carries `metadata.vehicleId` and is not tied to the owner, so the seller's key still works.
 --- `revokeOldKeys` removes keys from the previous owner's pockets when online; it can't reach a key offline, in a
 --- stash, a boot or on the ground. Returns `false` rather than nil on failure.
 ---@param vehicleId number|WhipVehicleRef|nil
----@param newOwner number|table  the receiving player: a server id, or { charId = n } while they play
----@param opts table|nil  { giveKey = true, revokeOldKeys = true }
+---@param newOwner number|table  an online server id, or { charId = n } online or offline
+---@param opts table|nil  { giveKey = true, revokeOldKeys = true, expectedOwner?: number } Expected owner character id
 ---@return boolean ok
 ---@return string|nil err
 exports('TransferVehicle', function(vehicleId, newOwner, opts)
@@ -4918,22 +4925,11 @@ exports('SetVehicleCustody', function(ref, held, expectedOwner)
     local def = Vehicles._records[vehicleId]
     if not def or def.session then return false, 'Owned vehicle not found' end
     if expectedOwner ~= nil and def.ownerCharId ~= tonumber(expectedOwner) then return false, 'Vehicle ownership changed' end
-    if def.reservation and def.reservation ~= owner then return false, 'Vehicle is held by another resource' end
+    local holder = heldBy(def)
+    if holder and holder ~= owner then return false, 'Vehicle is held by another resource' end
     if Vehicles._transitionLocks[vehicleId] then return false, 'Vehicle is busy' end
     if not held and not def.reservation then return true end
-    local entity = Vehicles.getEntity(vehicleId)
-    if entity and #serverOccupants(entity) > 0 then return false, 'Somebody is still in that vehicle' end
     return underTransitionLock(vehicleId, 'custody', function()
-        local fields = { reservation = held and owner or Vehicles.NULL }
-        if held then
-            Vehicles.deleteServerEntity(vehicleId)
-            if not Stores.settle('vehrow:' .. tostring(vehicleId)) then return false, 'Vehicle save is pending' end
-            fields.state = 'garaged'
-            fields.x, fields.y, fields.z, fields.heading = Vehicles.NULL, Vehicles.NULL, Vehicles.NULL, Vehicles.NULL
-        end
-        local ok, reason = Vehicles.persist(vehicleId, fields)
-        if not ok then return false, reason end
-        if held then Vehicles._dirtyPos[vehicleId], Vehicles._lastPos[vehicleId] = nil, nil end
-        return true
+        return Vehicles.persist(vehicleId, { reservation = held and owner or Vehicles.NULL })
     end)
 end)
