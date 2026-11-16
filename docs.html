@@ -2809,6 +2809,27 @@ end</code></pre>
   <div class="return-info"><strong>Returns: </strong><code>true</code>, or <code>false, reason</code></div>
 </div></div>
 
+<div class="export-card" id="setbliplabel" data-search="setbliplabel blip label external third party pause map name">
+<div class="export-header"><span class="export-name">SetBlipLabel(handle, label)</span><span class="export-side side-client">CLIENT</span></div>
+<div class="export-body">
+  <p>Tell WHIP's pause map the label of a blip your resource made. GTA does not let WHIP read a blip's custom name back; without this registration the map uses the sprite's name, such as "Getaway Car" instead of "PDM". This does not change GTA's blip name, create a blip or remove one.</p>
+  <table class="param-table"><tr><th>Param</th><th>Type</th><th>Description</th></tr>
+  <tr><td>handle</td><td>integer</td><td>Positive client blip handle, such as the result of <code>AddBlipForCoord</code>. The blip must exist when registering a label</td></tr>
+  <tr><td>label</td><td>string|nil</td><td>Non-empty label, or <code>nil</code> to remove your registration, even after the blip has been deleted</td></tr></table>
+  <p>The same resource can update its label. Another running resource's registration and WHIP's own labels cannot be replaced. Only the registering resource can remove its label; removing an unregistered label succeeds. Labels are cleared when their resource stops.</p>
+  <div class="return-info"><strong>Returns: </strong><code>true, handle</code> when registered; <code>true</code> when removed; or <code>false, reason</code> for an invalid handle or label, a missing blip, or another resource's label. Does not wait.</div>
+<pre><code class="lang-lua">local blip = AddBlipForCoord(409.3, -1623.1, 29.3)
+BeginTextCommandSetBlipName('STRING')
+AddTextComponentSubstringPlayerName('PDM')
+EndTextCommandSetBlipName(blip)
+exports.whip_core:SetBlipLabel(blip, 'PDM')
+
+-- When removing it:
+exports.whip_core:SetBlipLabel(blip, nil)
+RemoveBlip(blip)</code></pre>
+  <p>Clear the registration whenever you remove the blip, so a reused handle does not inherit its old label. If <code>whip_core</code> restarts while your resource keeps running, register the labels of your surviving blips again from <code>onClientResourceStart</code>. For blips managed by WHIP, use <a href="#showblip"><code>ShowBlip</code></a> with <code>spec.label</code> instead.</p>
+</div></div>
+
 <div class="export-card" id="showblip" data-search="showblip hideblip setplayerwaypoint blip map marker waypoint route gps area server">
 <div class="export-header"><span class="export-name">ShowBlip(audience, id, spec) · HideBlip(id) · SetPlayerWaypoint(source, coords)</span><span class="export-side side-server">SERVER</span></div>
 <div class="export-body">

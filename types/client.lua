@@ -19,6 +19,14 @@
 ---@class WhipCoreClientExports
 local whip_core = {}
 
+--- Register this resource's label for an existing blip in WHIP's pause map. Nil removes it.
+--- The label is cleared when this resource stops. Does not change GTA's blip name or delete the blip.
+---@param handle number Existing client blip handle; clear the label when removing the blip
+---@param label string|nil Non-empty label, or nil to remove this resource's registration
+---@return boolean ok
+---@return string|number|nil keyOrReason Handle on registration, reason on failure
+function whip_core:SetBlipLabel(handle, label) end
+
 -- ============================================
 -- Callback
 -- ============================================
