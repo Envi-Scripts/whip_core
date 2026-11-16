@@ -384,11 +384,22 @@ local function check(entry, o, ctx, displayCache)
     if def.canInteract == nil and o.canInteract == nil then return true end
     if not displayCache then return checkCallbacks(entry, o, ctx) end
     local now = GetGameTimer()
-    local same = displayCache.at and now >= displayCache.at and now - displayCache.at < 100
+    local same = displayCache.at and now >= displayCache.at and now - displayCache.at < 500
         and displayCache.action == def.canInteract and displayCache.option == o.canInteract
     if same then
         for key, value in pairs(ctx) do
-            if type(value) == 'table' or displayCache.ctx[key] ~= value then same = false break end
+            local previous = displayCache.ctx[key]
+            if key == 'player' and type(value) == 'table' and type(previous) == 'table' then
+                for field, fact in pairs(value) do
+                    if type(fact) == 'table' or previous[field] ~= fact then same = false break end
+                end
+                for field in pairs(previous) do
+                    if value[field] == nil then same = false break end
+                end
+            elseif type(value) == 'table' or previous ~= value then
+                same = false
+            end
+            if not same then break end
         end
         for key in pairs(displayCache.ctx) do
             if ctx[key] == nil then same = false break end

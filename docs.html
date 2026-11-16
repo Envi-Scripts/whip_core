@@ -8267,7 +8267,7 @@ end)</code></pre>
 <tr><td><code>ace</code></td><td><code>'whip.devtools'</code></td><td>Holds this ACE (asked once, then remembered)</td></tr>
 </table>
 <p>A <code>vehiclePart</code> action refuses <code>alive = false</code> and <code>vehicle = 'in'</code>: it's always used on foot and alive.</p>
-<div class="info-box tip"><strong><code>require</code> is free; <code>canInteract</code> isn't.</strong> <code>canInteract</code> crosses into your resource on every pass, about 95 times a second per option near a car. Say what you can with <code>require</code>, checked first, and for a state only you know, add the action while it holds and remove it after.</div>
+<div class="info-box tip"><strong><code>require</code> is free; <code>canInteract</code> isn't.</strong> World prompts cache <code>canInteract</code> results for 500 ms while the context stays the same. A different entity or other context change rechecks immediately, and selection always checks again. Custom conditions can take up to half a second to show or hide a prompt; drawing and built-in requirements continue updating. Say what you can with <code>require</code>, checked first, and for a state only you know, add the action while it holds and remove it after.</div>
 
 <h3 id="interactions-ctx">ctx: what your functions get</h3>
 <p><code>label</code>, <code>canInteract</code> and <code>onSelect</code> get one table; only <code>onSelect</code>'s has the functions.</p>
