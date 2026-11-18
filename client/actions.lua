@@ -93,6 +93,8 @@
 
 Actions = {}
 
+local CORE = GetCurrentResourceName()
+
 --- What each action is mounted as: [key] = { kind, ids = { engineId, ... }, partKey?, entity? }
 local mounted = {}
 
@@ -382,7 +384,9 @@ local function check(entry, o, ctx, displayCache)
     end
 
     if def.canInteract == nil and o.canInteract == nil then return true end
-    if not displayCache then return checkCallbacks(entry, o, ctx) end
+    -- whip_core's own callbacks are plain calls, asked every time (a point option's reach is one); the cache
+    -- spares other resources' calls their round trip.
+    if not displayCache or entry.owner == CORE then return checkCallbacks(entry, o, ctx) end
     local now = GetGameTimer()
     local same = displayCache.at and now >= displayCache.at and now - displayCache.at < 500
         and displayCache.action == def.canInteract and displayCache.option == o.canInteract
